@@ -1,0 +1,49 @@
+# Grafana Datasources Configuration
+# This file configures Prometheus as the primary datasource for metrics
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      httpMethod: POST
+      prometheusType: Prometheus
+      prometheusVersion: 2.40.0
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: tempo
+    
+  - name: MinIO
+    type: prometheus
+    access: proxy
+    url: http://minio:9090/minio/v2/metrics/cluster
+    editable: true
+    jsonData:
+      httpMethod: GET
+      prometheusType: Prometheus
+    httpHeaderName1: 'Authorization'
+    secureJsonData:
+      httpHeaderValue1: 'Bearer minio-metrics-token'
+
+  - name: Node Exporter
+    type: prometheus
+    access: proxy
+    url: http://node-exporter:9100/metrics
+    editable: true
+    jsonData:
+      httpMethod: GET
+      prometheusType: Prometheus
+
+  - name: cAdvisor
+    type: prometheus
+    access: proxy
+    url: http://cadvisor:8080/metrics
+    editable: true
+    jsonData:
+      httpMethod: GET
+      prometheusType: Prometheus
