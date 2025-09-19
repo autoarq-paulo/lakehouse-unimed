@@ -1,0 +1,107 @@
+# Prometheus Configuration for Lakehouse Unimed
+# Scrapes metrics from various components in the data platform
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'lakehouse-unimed'
+    environment: 'production'
+
+rule_files:
+  - "alert_rules.yml"
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Node Exporter for system metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # cAdvisor for container metrics
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # MinIO metrics
+  - job_name: 'minio'
+    static_configs:
+      - targets: ['minio:9000']
+    scrape_interval: 30s
+    metrics_path: /minio/v2/metrics/cluster
+    scheme: http
+
+  # Airflow metrics (if webserver exposes metrics)
+  - job_name: 'airflow'
+    static_configs:
+      - targets: ['airflow-webserver:8080']
+    scrape_interval: 60s
+    metrics_path: /admin/metrics/
+    scheme: http
+
+  # Trino metrics (JMX via HTTP)
+  - job_name: 'trino'
+    static_configs:
+      - targets: ['trino:8080']
+    scrape_interval: 30s
+    metrics_path: /v1/jmx/mbean
+    scheme: http
+    params:
+      get: ['java.lang:type=Memory']
+
+  # Spark metrics (if JMX exporter is configured)
+  - job_name: 'spark-master'
+    static_configs:
+      - targets: ['spark-master:7077']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scheme: http
+
+  # PostgreSQL metrics (for Hive Metastore)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:5432']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scheme: http
+
+  # Hive Metastore metrics (if JMX exporter is configured)
+  - job_name: 'hive-metastore'
+    static_configs:
+      - targets: ['hive-metastore:9083']
+    scrape_interval: 60s
+    metrics_path: /metrics
+    scheme: http
+
+# Alerting configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+      scheme: http
+      timeout: 10s
+      api_version: v1
+
+# Storage configuration
+storage:
+  tsdb:
+    path: /prometheus/data
+    retention.time: 30d
+    retention.size: 10GB
+
+# Web configuration
+web:
+  console.templates: /etc/prometheus/consoles
+  console.libraries: /etc/prometheus/console_libraries
+  enable-lifecycle: true
+  enable-admin-api: true
