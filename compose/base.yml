@@ -135,7 +135,7 @@ services:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${PG_USER:-postgres}:${PG_PASSWORD:-postgres}@postgres:5432/airflow
       AIRFLOW__CELERY__RESULT_BACKEND: redis://redis:6379/0
       AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
-      AIRFLOW__CORE__FERNET_KEY: 'ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pk='
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
@@ -171,7 +171,7 @@ services:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${PG_USER:-postgres}:${PG_PASSWORD:-postgres}@postgres:5432/airflow
       AIRFLOW__CELERY__RESULT_BACKEND: redis://redis:6379/0
       AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
-      AIRFLOW__CORE__FERNET_KEY: 'ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pk='
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
@@ -199,7 +199,7 @@ services:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${PG_USER:-postgres}:${PG_PASSWORD:-postgres}@postgres:5432/airflow
       AIRFLOW__CELERY__RESULT_BACKEND: redis://redis:6379/0
       AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
-      AIRFLOW__CORE__FERNET_KEY: 'ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pk='
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio123}
       S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
