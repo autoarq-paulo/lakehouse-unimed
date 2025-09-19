@@ -1,0 +1,222 @@
+# Base Docker Compose for Lakehouse Unimed
+# Core services: Spark, Trino, MinIO, Metastore, Airflow
+
+version: '3.8'
+
+services:
+  # PostgreSQL for Hive Metastore and Airflow
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: ${PG_DB:-metastore}
+      POSTGRES_USER: ${PG_USER:-postgres}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lakehouse
+
+  # MinIO S3-compatible storage
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio123}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"  # API
+      - "9001:9001"  # Console
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - lakehouse
+
+  # Hive Metastore
+  hive-metastore:
+    image: apache/hive:3.1.3
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SERVICE_NAME: metastore
+      DB_DRIVER: postgres
+      SERVICE_OPTS: "-Djavax.jdo.option.ConnectionDriverName=org.postgresql.Driver -Djavax.jdo.option.ConnectionURL=jdbc:postgresql://postgres:5432/${PG_DB:-metastore} -Djavax.jdo.option.ConnectionUserName=${PG_USER:-postgres} -Djavax.jdo.option.ConnectionPassword=${PG_PASSWORD:-postgres}"
+    ports:
+      - "9083:9083"
+    volumes:
+      - ./conf/hive-site.xml:/opt/hive/conf/hive-site.xml
+    networks:
+      - lakehouse
+
+  # Spark Master
+  spark-master:
+    image: bitnami/spark:3.4
+    environment:
+      SPARK_MODE: master
+      SPARK_MASTER_HOST: spark-master
+      SPARK_MASTER_PORT: 7077
+      SPARK_MASTER_WEBUI_PORT: 8080
+    ports:
+      - "7077:7077"
+      - "8080:8080"
+    volumes:
+      - ./jobs:/opt/jobs
+      - ./conf/spark:/opt/bitnami/spark/conf
+    networks:
+      - lakehouse
+
+  # Spark Worker
+  spark-worker:
+    image: bitnami/spark:3.4
+    depends_on:
+      - spark-master
+    environment:
+      SPARK_MODE: worker
+      SPARK_MASTER_URL: spark://spark-master:7077
+      SPARK_WORKER_MEMORY: ${SPARK_WORKER_MEMORY:-2g}
+      SPARK_WORKER_CORES: ${SPARK_WORKER_CORES:-2}
+    volumes:
+      - ./jobs:/opt/jobs
+      - ./conf/spark:/opt/bitnami/spark/conf
+    networks:
+      - lakehouse
+
+  # Trino Coordinator
+  trino:
+    image: trinodb/trino:427
+    depends_on:
+      - hive-metastore
+      - minio
+    ports:
+      - "8081:8080"
+    environment:
+      TRINO_ENVIRONMENT: production
+    volumes:
+      - ./conf/trino/etc:/etc/trino
+    networks:
+      - lakehouse
+
+  # Airflow Redis
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - lakehouse
+
+  # Airflow Webserver
+  airflow-webserver:
+    image: apache/airflow:2.7.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${PG_USER:-postgres}:${PG_PASSWORD:-postgres}@postgres:5432/airflow
+      AIRFLOW__CELERY__RESULT_BACKEND: redis://redis:6379/0
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__CORE__FERNET_KEY: 'ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pk='
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio123}
+      S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./jobs:/opt/jobs
+      - ./sql:/opt/sql
+      - airflow_logs:/opt/airflow/logs
+    ports:
+      - "8082:8080"
+    command: webserver
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - lakehouse
+
+  # Airflow Scheduler
+  airflow-scheduler:
+    image: apache/airflow:2.7.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${PG_USER:-postgres}:${PG_PASSWORD:-postgres}@postgres:5432/airflow
+      AIRFLOW__CELERY__RESULT_BACKEND: redis://redis:6379/0
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__CORE__FERNET_KEY: 'ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pk='
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio123}
+      S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./jobs:/opt/jobs
+      - ./sql:/opt/sql
+      - airflow_logs:/opt/airflow/logs
+    command: scheduler
+    networks:
+      - lakehouse
+
+  # Airflow Worker
+  airflow-worker:
+    image: apache/airflow:2.7.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${PG_USER:-postgres}:${PG_PASSWORD:-postgres}@postgres:5432/airflow
+      AIRFLOW__CELERY__RESULT_BACKEND: redis://redis:6379/0
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__CORE__FERNET_KEY: 'ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pk='
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio123}
+      S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./jobs:/opt/jobs
+      - ./sql:/opt/sql
+      - airflow_logs:/opt/airflow/logs
+    command: celery worker
+    networks:
+      - lakehouse
+
+volumes:
+  postgres_data:
+  minio_data:
+  airflow_logs:
+
+networks:
+  lakehouse:
+    driver: bridge
