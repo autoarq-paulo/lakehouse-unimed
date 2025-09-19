@@ -1,0 +1,234 @@
+{
+  "data_asset_name": "silver.claims",
+  "expectation_suite_name": "silver_claims_quality",
+  "meta": {
+    "great_expectations_version": "0.17.0",
+    "created_by": "lakehouse-unimed",
+    "created_at": "2024-01-01",
+    "description": "Data quality expectations for silver layer claims data"
+  },
+  "expectations": [
+    {
+      "expectation_type": "expect_column_to_exist",
+      "kwargs": {
+        "column": "claim_id"
+      },
+      "meta": {
+        "notes": "Claim ID must be present"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "claim_id"
+      },
+      "meta": {
+        "notes": "Claim ID cannot be null"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_unique",
+      "kwargs": {
+        "column": "claim_id"
+      },
+      "meta": {
+        "notes": "Claim ID must be unique"
+      }
+    },
+    {
+      "expectation_type": "expect_column_to_exist",
+      "kwargs": {
+        "column": "member_id"
+      },
+      "meta": {
+        "notes": "Member ID must be present"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "member_id"
+      },
+      "meta": {
+        "notes": "Member ID cannot be null"
+      }
+    },
+    {
+      "expectation_type": "expect_column_to_exist",
+      "kwargs": {
+        "column": "claim_amount"
+      },
+      "meta": {
+        "notes": "Claim amount must be present"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_between",
+      "kwargs": {
+        "column": "claim_amount",
+        "min_value": 0,
+        "max_value": 1000000
+      },
+      "meta": {
+        "notes": "Claim amount must be between 0 and 1,000,000"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_of_type",
+      "kwargs": {
+        "column": "claim_amount",
+        "type_": "float64"
+      },
+      "meta": {
+        "notes": "Claim amount must be numeric"
+      }
+    },
+    {
+      "expectation_type": "expect_column_to_exist",
+      "kwargs": {
+        "column": "service_date"
+      },
+      "meta": {
+        "notes": "Service date must be present"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_dateutil_parseable",
+      "kwargs": {
+        "column": "service_date"
+      },
+      "meta": {
+        "notes": "Service date must be a valid date"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_between",
+      "kwargs": {
+        "column": "service_date",
+        "min_value": "2020-01-01",
+        "max_value": "2030-12-31"
+      },
+      "meta": {
+        "notes": "Service date must be within reasonable range"
+      }
+    },
+    {
+      "expectation_type": "expect_column_to_exist",
+      "kwargs": {
+        "column": "provider_name"
+      },
+      "meta": {
+        "notes": "Provider name must be present"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "provider_name"
+      },
+      "meta": {
+        "notes": "Provider name cannot be null"
+      }
+    },
+    {
+      "expectation_type": "expect_column_value_lengths_to_be_between",
+      "kwargs": {
+        "column": "provider_name",
+        "min_value": 1,
+        "max_value": 100
+      },
+      "meta": {
+        "notes": "Provider name must be between 1 and 100 characters"
+      }
+    },
+    {
+      "expectation_type": "expect_column_to_exist",
+      "kwargs": {
+        "column": "claim_amount_category"
+      },
+      "meta": {
+        "notes": "Claim amount category must be present"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "kwargs": {
+        "column": "claim_amount_category",
+        "value_set": ["ZERO", "LOW", "MEDIUM", "HIGH", "VERY_HIGH"]
+      },
+      "meta": {
+        "notes": "Claim amount category must be one of the predefined values"
+      }
+    },
+    {
+      "expectation_type": "expect_column_to_exist",
+      "kwargs": {
+        "column": "data_quality_score"
+      },
+      "meta": {
+        "notes": "Data quality score must be present"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_between",
+      "kwargs": {
+        "column": "data_quality_score",
+        "min_value": 0.0,
+        "max_value": 1.0
+      },
+      "meta": {
+        "notes": "Data quality score must be between 0.0 and 1.0"
+      }
+    },
+    {
+      "expectation_type": "expect_column_to_exist",
+      "kwargs": {
+        "column": "processing_timestamp"
+      },
+      "meta": {
+        "notes": "Processing timestamp must be present"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "processing_timestamp"
+      },
+      "meta": {
+        "notes": "Processing timestamp cannot be null"
+      }
+    },
+    {
+      "expectation_type": "expect_table_row_count_to_be_between",
+      "kwargs": {
+        "min_value": 0,
+        "max_value": 10000000
+      },
+      "meta": {
+        "notes": "Table should have reasonable number of rows"
+      }
+    },
+    {
+      "expectation_type": "expect_column_proportion_of_unique_values_to_be_between",
+      "kwargs": {
+        "column": "claim_id",
+        "min_value": 0.99,
+        "max_value": 1.0
+      },
+      "meta": {
+        "notes": "At least 99% of claim IDs should be unique"
+      }
+    },
+    {
+      "expectation_type": "expect_column_mean_to_be_between",
+      "kwargs": {
+        "column": "data_quality_score",
+        "min_value": 0.7,
+        "max_value": 1.0
+      },
+      "meta": {
+        "notes": "Average data quality score should be at least 0.7"
+      }
+    }
+  ]
+}
